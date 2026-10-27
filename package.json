@@ -1,0 +1,20 @@
+{
+  "name": "qqbridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "大肥鱼 QQ/网页聊天桥（Docker 可配置部署版）",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node bridge.mjs",
+    "webchat": "node server.mjs",
+    "admin": "node admin.mjs",
+    "healthcheck": "node healthcheck.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.48.0",
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+data/
+data-*/
+.env
+.testdata/
+.testtmp/
+*.log
+*.zip
+backup/
+/screenshots/
+.DS_Store
+Thumbs.db

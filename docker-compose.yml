@@ -1,0 +1,157 @@
+name: qqbridge
+
+x-common: &common
+  restart: unless-stopped
+  user: "1000:1000"
+  read_only: true
+  tmpfs:
+    - /tmp:size=256m
+  cap_drop:
+    - ALL
+  security_opt:
+    - "no-new-privileges:true"
+  mem_limit: 768m
+  cpus: 2
+  networks:
+    - qqnet
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  # ---------------------------------------------------------------------------
+  # QQ 协议端：NapCat（OneBot v11 WS）
+  # ---------------------------------------------------------------------------
+  napcat:
+    <<: *common
+    image: ${NAPCAT_IMAGE:-mlikiowa/napcat-docker:latest}
+    container_name: qqbridge-napcat
+    # NapCat 官方镜像的 entrypoint 需要 root 做 usermod/chown/gosu；
+    # 强制 user 1000 + read_only 会导致它无法启动。这里只对这一个第三方
+    # 容器放开 root/可写根文件系统，其余加固项（cap_drop、tmpfs、
+    # no-new-privileges、内存/CPU 限制）保留。bridge/webchat/admin
+    # 三个自建容器仍严格以 uid=1000 非 root、只读根文件系统运行。
+    user: "0:0"
+    read_only: false
+    cap_drop: []
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      NAPCAT_UID: "1000"
+      NAPCAT_GID: "1000"
+      HOME: /app
+      MODE: ws
+      WEBUI_TOKEN: ${NAPCAT_WEBUI_TOKEN:?请先在 .env 中设置 NAPCAT_WEBUI_TOKEN}
+    volumes:
+      - ${DATA_DIR:-./data}/napcat/config:/app/napcat/config
+      - ${DATA_DIR:-./data}/napcat/QQ:/app/.config/QQ
+      - ${DATA_DIR:-./data}/napcat/plugins:/app/napcat/plugins
+      - ${DATA_DIR:-./data}/napcat/logs:/app/napcat/logs
+    expose:
+      - "3001"
+      - "6099"
+    # WebUI 只绑定本机，扫码请走 SSH 隧道：
+    # ssh -L 6099:127.0.0.1:6099 user@server
+    ports:
+      - "127.0.0.1:6099:6099"
+    healthcheck:
+      # 用 bash /dev/tcp 检查 WebUI(6099) 与 OneBot WS(3001)，不依赖镜像内是否有 node CLI
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6099' && bash -c 'exec 3<>/dev/tcp/127.0.0.1/3001'"]
+      interval: 30s
+      timeout: 6s
+      retries: 5
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # QQ 聊天桥
+  # ---------------------------------------------------------------------------
+  bridge:
+    <<: *common
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: qqbridge:1.0.0
+    container_name: qqbridge-bridge
+    command: ["node", "bridge.mjs"]
+    depends_on:
+      napcat:
+        condition: service_started
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      HEALTH_URL: http://127.0.0.1:3010/healthz
+      CONTROL_PORT: "3010"
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.mjs"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # 网页聊天
+  # ---------------------------------------------------------------------------
+  webchat:
+    <<: *common
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: qqbridge:1.0.0
+    container_name: qqbridge-webchat
+    command: ["node", "server.mjs"]
+    depends_on:
+      bridge:
+        condition: service_started
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      PORT: "3002"
+      HEALTH_URL: http://127.0.0.1:3002/healthz
+    # 仅本机映射；外部访问走 SSH 隧道：
+    # ssh -L 3002:127.0.0.1:3002 user@server
+    ports:
+      - "127.0.0.1:${WEBCHAT_PORT:-3002}:3002"
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.mjs"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # 配置面板（对外 8080）
+  # ---------------------------------------------------------------------------
+  admin:
+    <<: *common
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: qqbridge:1.0.0
+    container_name: qqbridge-admin
+    command: ["node", "admin.mjs"]
+    depends_on:
+      bridge:
+        condition: service_healthy
+      webchat:
+        condition: service_healthy
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      PORT: "8080"
+      HEALTH_URL: http://127.0.0.1:8080/healthz
+    ports:
+      - "${ADMIN_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.mjs"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+networks:
+  qqnet:
+    driver: bridge

@@ -1,0 +1,1290 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>大肥鱼 · 控制台</title>
+<style>
+  :root {
+    --bg:#0b0e1a; --bg2:#111529; --panel:#151a30; --panel2:#1b2240; --line:#283253;
+    --text:#e9edff; --muted:#8b94bb; --accent:#5b8cff; --accent2:#7aa2ff;
+    --ok:#35d39a; --warn:#ffb454; --danger:#ff5f7a; --shadow:0 18px 50px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; }
+  body { margin:0; background:radial-gradient(1200px 800px at 15% -10%,#1a2350 0%,transparent 55%),linear-gradient(180deg,#0d1122,#080a13 70%); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+  button,input,textarea,select { font:inherit; color:inherit; }
+  button { cursor:pointer; }
+  [hidden] { display:none !important; }
+
+  /* 登录 */
+  .login-wrap { min-height:100%; display:grid; place-items:center; padding:24px; }
+  .login-card { width:min(420px,100%); background:linear-gradient(180deg,#171d36,#12162a); border:1px solid var(--line); border-radius:22px; padding:34px 32px; box-shadow:var(--shadow); }
+  .login-logo { width:56px; height:56px; border-radius:18px; background:linear-gradient(135deg,#5b8cff,#8f6bff); display:grid; place-items:center; font-size:28px; margin-bottom:18px; box-shadow:0 10px 30px rgba(91,140,255,.35); }
+  .login-card h1 { margin:0 0 6px; font-size:22px; }
+  .login-card p { margin:0 0 22px; color:var(--muted); font-size:13px; line-height:1.7; }
+  .login-card label { display:block; font-size:13px; color:var(--muted); margin-bottom:8px; }
+  .login-card input { width:100%; height:46px; border-radius:12px; border:1px solid var(--line); background:#0e1326; padding:0 14px; outline:none; }
+  .login-card input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(91,140,255,.15); }
+  .login-error { color:var(--danger); font-size:13px; min-height:18px; margin-top:10px; }
+  .login-tip { margin-top:18px; font-size:12px; color:var(--muted); line-height:1.7; }
+
+  /* 布局 */
+  .app { display:flex; min-height:100%; }
+  .sidebar { width:228px; flex:none; padding:22px 14px; border-right:1px solid var(--line); background:rgba(13,17,34,.72); backdrop-filter:blur(12px); display:flex; flex-direction:column; gap:6px; position:sticky; top:0; height:100vh; }
+  .brand { display:flex; align-items:center; gap:11px; padding:4px 10px 20px; }
+  .brand .mark { width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg,#5b8cff,#8f6bff); display:grid; place-items:center; font-size:19px; }
+  .brand b { display:block; font-size:15px; }
+  .brand span { display:block; font-size:11px; color:var(--muted); margin-top:2px; }
+  .nav-item { display:flex; align-items:center; gap:11px; width:100%; border:none; background:transparent; color:var(--muted); padding:11px 13px; border-radius:11px; font-size:14px; text-align:left; transition:.15s; }
+  .nav-item .ico { width:20px; text-align:center; font-size:16px; }
+  .nav-item:hover { background:#171e38; color:var(--text); }
+  .nav-item.active { background:linear-gradient(90deg,rgba(91,140,255,.22),rgba(91,140,255,.06)); color:#dce6ff; box-shadow:inset 0 0 0 1px rgba(91,140,255,.25); }
+  .sidebar-foot { margin-top:auto; padding:14px 10px 0; border-top:1px solid var(--line); font-size:11px; color:var(--muted); display:flex; flex-direction:column; gap:8px; }
+  .sidebar-foot button { background:transparent; border:none; color:var(--muted); text-align:left; padding:0; font-size:12px; }
+  .sidebar-foot button:hover { color:var(--danger); }
+
+  .main { flex:1; min-width:0; padding:26px 32px 60px; max-width:1180px; }
+  .topbar { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; }
+  .topbar h1 { margin:0; font-size:23px; letter-spacing:.3px; }
+  .topbar p { margin:6px 0 0; color:var(--muted); font-size:13px; }
+  .top-actions { display:flex; gap:10px; align-items:center; }
+  .banner { display:flex; align-items:center; justify-content:space-between; gap:14px; background:rgba(255,180,84,.1); border:1px solid rgba(255,180,84,.35); color:#ffd49a; border-radius:12px; padding:12px 16px; font-size:13px; margin-bottom:20px; }
+  .banner a, .banner button { color:#ffd49a; background:none; border:none; text-decoration:underline; font-size:13px; }
+
+  .view { display:none; animation:fade .18s ease; }
+  .view.active { display:block; }
+  @keyframes fade { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+  .grid { display:grid; gap:16px; }
+  .grid.cols-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .grid.cols-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .card { background:linear-gradient(180deg,rgba(27,34,64,.82),rgba(19,24,45,.9)); border:1px solid var(--line); border-radius:16px; padding:18px 20px; box-shadow:0 8px 30px rgba(0,0,0,.18); }
+  .card h3 { margin:0 0 14px; font-size:14px; color:#cfd8ff; display:flex; align-items:center; justify-content:space-between; }
+  .card .sub { color:var(--muted); font-size:12px; font-weight:400; }
+  .metric { font-size:26px; font-weight:650; letter-spacing:.3px; margin:2px 0 6px; }
+  .metric small { font-size:13px; color:var(--muted); font-weight:400; }
+  .hint { color:var(--muted); font-size:12px; line-height:1.6; }
+  .mono { font-family:"JetBrains Mono",Consolas,monospace; }
+
+  .svc { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid rgba(40,50,83,.6); }
+  .svc:last-child { border-bottom:none; padding-bottom:0; }
+  .svc:first-of-type { padding-top:0; }
+  .svc .dot { width:9px; height:9px; border-radius:50%; background:#556; box-shadow:0 0 0 4px rgba(85,85,102,.14); flex:none; }
+  .svc.online .dot { background:var(--ok); box-shadow:0 0 0 4px rgba(53,211,154,.14),0 0 12px rgba(53,211,154,.8); }
+  .svc.warn .dot { background:var(--warn); box-shadow:0 0 0 4px rgba(255,180,84,.14); }
+  .svc b { display:block; font-size:13px; }
+  .svc span.meta { display:block; color:var(--muted); font-size:11.5px; margin-top:3px; word-break:break-all; }
+
+  .diskbar { height:8px; border-radius:8px; background:#0d1226; overflow:hidden; margin:12px 0 8px; border:1px solid #222b4a; }
+  .diskbar i { display:block; height:100%; background:linear-gradient(90deg,#5b8cff,#8f6bff); width:0%; transition:width .4s; }
+
+  .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 22px; }
+  .field { display:flex; flex-direction:column; gap:7px; min-width:0; }
+  .field.full { grid-column:1 / -1; }
+  .field label { font-size:12.5px; color:#b9c3ea; display:flex; align-items:center; gap:8px; }
+  .field label .tag { font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:1px 6px; font-weight:400; }
+  .field input, .field textarea, .field select { width:100%; border:1px solid var(--line); background:#0d1226; border-radius:10px; padding:10px 12px; outline:none; transition:.15s; }
+  .field input { height:42px; }
+  .field textarea { min-height:120px; resize:vertical; line-height:1.65; }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(91,140,255,.13); }
+  .field .secret-hint { font-size:11.5px; color:var(--muted); min-height:16px; }
+  .field .desc { font-size:11.5px; color:var(--muted); line-height:1.6; }
+
+  .actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:20px; }
+  .btn { border:1px solid var(--line); background:#1a2240; color:var(--text); border-radius:10px; padding:9px 16px; font-size:13px; transition:.15s; }
+  .btn:hover { border-color:#3a4875; background:#212b4f; }
+  .btn.primary { background:linear-gradient(135deg,#5b8cff,#7a6bff); border-color:transparent; color:white; box-shadow:0 8px 20px rgba(91,140,255,.25); }
+  .btn.primary:hover { filter:brightness(1.08); }
+  .btn.danger { border-color:rgba(255,95,122,.45); color:#ff9fb0; background:rgba(255,95,122,.08); }
+  .btn.ghost { background:transparent; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+
+  .switch { position:relative; display:inline-flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
+  .switch input { display:none; }
+  .switch i { width:42px; height:24px; border-radius:20px; background:#2a3354; position:relative; transition:.2s; flex:none; }
+  .switch i:after { content:""; position:absolute; left:3px; top:3px; width:18px; height:18px; border-radius:50%; background:#8b94bb; transition:.2s; }
+  .switch input:checked + i { background:linear-gradient(135deg,#5b8cff,#7a6bff); }
+  .switch input:checked + i:after { left:21px; background:white; }
+  .switch span { font-size:13px; }
+
+  .auto-row { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; padding:16px 0; border-bottom:1px solid rgba(40,50,83,.55); }
+  .auto-row:last-child { border-bottom:none; }
+  .auto-row .risk { color:#ff7f93; font-size:11.5px; margin-top:6px; }
+
+  .result { margin-top:16px; background:#0c1124; border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:12.5px; color:#c7d1f5; white-space:pre-wrap; word-break:break-word; line-height:1.65; min-height:20px; }
+  .result.err { border-color:rgba(255,95,122,.4); color:#ffa9b8; background:rgba(255,95,122,.06); }
+  .result.ok { border-color:rgba(53,211,154,.35); }
+
+  .memo-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .memo-grid textarea { min-height:420px; font-size:13px; }
+  .count { font-size:11px; color:var(--muted); }
+
+  .sticker-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:14px; margin-top:4px; }
+  .sticker { background:#0d1226; border:1px solid var(--line); border-radius:14px; padding:10px; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .sticker img { width:96px; height:96px; object-fit:contain; border-radius:8px; background:rgba(255,255,255,.03); }
+  .sticker .name { font-size:11.5px; color:#c8d2f5; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sticker .meta { font-size:10px; color:var(--muted); }
+  .sticker button { width:100%; padding:5px 0; font-size:11px; }
+  .empty { color:var(--muted); font-size:13px; padding:20px 0; text-align:center; }
+
+  .log-toolbar { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+  .log-toolbar .field { min-width:130px; }
+  .log-toolbar .field.grow { flex:1; min-width:180px; }
+  .logbox { margin-top:16px; background:#070a14; border:1px solid var(--line); border-radius:12px; padding:14px; height:min(62vh,640px); overflow:auto; font-family:Consolas,"JetBrains Mono",monospace; font-size:12px; line-height:1.6; white-space:pre-wrap; word-break:break-word; color:#b9c6ee; }
+  .logbox .warn { color:#ffcb7d; }
+  .logbox .err { color:#ff8fa4; }
+
+  .ops-list { display:flex; flex-direction:column; gap:14px; }
+  .ops-item { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:14px 0; border-bottom:1px solid rgba(40,50,83,.55); }
+  .ops-item:last-child { border-bottom:none; }
+  .ops-item b { font-size:13.5px; }
+  .ops-item p { margin:4px 0 0; color:var(--muted); font-size:11.5px; }
+
+  .toast { position:fixed; right:24px; bottom:24px; background:#1b2342; border:1px solid #36426d; color:#dfe6ff; padding:12px 18px; border-radius:12px; font-size:13px; box-shadow:var(--shadow); opacity:0; transform:translateY(10px); pointer-events:none; transition:.2s; z-index:99; max-width:min(420px,90vw); }
+  .toast.show { opacity:1; transform:none; }
+  .toast.err { border-color:rgba(255,95,122,.5); color:#ffb3c0; }
+
+  @media (max-width:980px) {
+    .grid.cols-3, .grid.cols-2, .form-grid, .memo-grid { grid-template-columns:1fr; }
+    .sidebar { width:74px; padding:16px 8px; }
+    .brand div:last-child, .nav-item span:last-child, .sidebar-foot span, .sidebar-foot button span { display:none; }
+    .nav-item { justify-content:center; padding:12px 0; }
+    .main { padding:20px 16px 50px; }
+    .topbar { flex-direction:column; align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-wrap" id="loginScreen">
+  <form class="login-card" id="loginForm" autocomplete="off">
+    <div class="login-logo">🐳</div>
+    <h1>大肥鱼控制台</h1>
+    <p>首次启动的初始密码打印在容器日志里：<br><code>docker compose logs admin | grep 初始密码</code></p>
+    <label for="loginPassword">管理员密码</label>
+    <input id="loginPassword" type="password" placeholder="请输入密码" autocomplete="current-password" required>
+    <div class="login-error" id="loginError"></div>
+    <button class="btn primary" style="width:100%;height:46px;margin-top:14px" type="submit">登录</button>
+    <div class="login-tip">登录态使用 HttpOnly Cookie，24 小时有效。所有密钥仅保存在服务器 /data/config.json，不会回显明文。</div>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">🐳</div>
+      <div><b>大肥鱼</b><span>QQ Bridge Console</span></div>
+    </div>
+    <button class="nav-item active" data-view="overview"><span class="ico">◎</span><span>总览</span></button>
+    <button class="nav-item" data-view="ai"><span class="ico">✦</span><span>AI 设置</span></button>
+    <button class="nav-item" data-view="qq"><span class="ico">◈</span><span>QQ 设置</span></button>
+    <button class="nav-item" data-view="tts"><span class="ico">♪</span><span>TTS 设置</span></button>
+    <button class="nav-item" data-view="memory"><span class="ico">✎</span><span>人格与记忆</span></button>
+    <button class="nav-item" data-view="stickers"><span class="ico">☺</span><span>表情库</span></button>
+    <button class="nav-item" data-view="automation"><span class="ico">⚠</span><span>抖音自动化</span></button>
+    <button class="nav-item" data-view="logs"><span class="ico">≡</span><span>日志</span></button>
+    <button class="nav-item" data-view="ops"><span class="ico">⚙</span><span>运维</span></button>
+    <div class="sidebar-foot">
+      <span id="footVersion">v1.0.0</span>
+      <button id="btnLogout"><span>↩ 退出登录</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="viewTitle">总览</h1>
+        <p id="viewSub">服务状态、QQ 登录与资源占用</p>
+      </div>
+      <div class="top-actions">
+        <button class="btn ghost" id="btnRefreshAll">刷新状态</button>
+      </div>
+    </div>
+
+    <div class="banner" id="passwordBanner" hidden>
+      <span>⚠ 当前仍在使用初始密码，请立即前往「运维」修改。</span>
+      <button id="bannerGoOps">去修改</button>
+    </div>
+
+    <!-- 总览 -->
+    <section class="view active" id="view-overview">
+      <div class="grid cols-3">
+        <div class="card">
+          <h3>服务状态 <span class="sub">30s 自动刷新</span></h3>
+          <div class="svc" id="svcNapcat"><span class="dot"></span><div><b>NapCat</b><span class="meta" id="svcNapcatMeta">检测中…</span></div></div>
+          <div class="svc" id="svcBridge"><span class="dot"></span><div><b>Bridge</b><span class="meta" id="svcBridgeMeta">检测中…</span></div></div>
+          <div class="svc" id="svcWebchat"><span class="dot"></span><div><b>Webchat</b><span class="meta" id="svcWebchatMeta">检测中…</span></div></div>
+        </div>
+        <div class="card">
+          <h3>QQ 登录</h3>
+          <div class="metric" id="ovQqNumber">—</div>
+          <div class="hint" id="ovQqName">未获取登录信息</div>
+          <div class="svc" id="svcQq" style="margin-top:14px;border-bottom:none;padding-bottom:0"><span class="dot"></span><div><b>登录状态</b><span class="meta" id="ovQqState">离线</span></div></div>
+          <div class="hint mono" id="ovWs" style="margin-top:12px">ws://napcat:3001</div>
+        </div>
+        <div class="card">
+          <h3>DeepSeek</h3>
+          <div class="metric" id="ovCalls">0 <small>次调用</small></div>
+          <div class="svc" style="border-bottom:none;padding:0"><span class="dot" id="dsDot"></span><div><b>错误</b><span class="meta" id="ovErrors">0 次</span></div></div>
+          <div class="hint" id="ovLastError" style="margin-top:10px">暂无错误</div>
+        </div>
+      </div>
+
+      <div class="grid cols-3" style="margin-top:16px">
+        <div class="card">
+          <h3>磁盘占用 <span class="sub" id="ovDataDir">/data</span></h3>
+          <div class="metric" id="ovDisk">—</div>
+          <div class="diskbar"><i id="ovDiskBar"></i></div>
+          <div class="hint" id="ovDiskFree">—</div>
+        </div>
+        <div class="card">
+          <h3>运行信息</h3>
+          <div class="svc" style="border-bottom:none;padding:0"><span class="dot online" style="background:#5b8cff;box-shadow:none"></span><div><b>版本</b><span class="meta" id="ovVersion">v1.0.0</span></div></div>
+          <div class="hint" style="margin-top:10px" id="ovUptime">已运行 —</div>
+          <div class="hint" style="margin-top:8px" id="ovAutomation">抖音自动化：关闭</div>
+        </div>
+        <div class="card">
+          <h3>快捷操作</h3>
+          <div class="actions" style="margin-top:0">
+            <button class="btn" onclick="document.querySelector('[data-view=logs]').click()">查看日志</button>
+            <button class="btn" onclick="document.querySelector('[data-view=memory]').click()">编辑人格</button>
+            <button class="btn" onclick="document.querySelector('[data-view=stickers]').click()">管理表情</button>
+          </div>
+          <div class="hint" style="margin-top:14px">保存配置后 bridge / webchat 会收到 /reload 热加载，无需重启容器。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI -->
+    <section class="view" id="view-ai">
+      <div class="card">
+        <h3>AI 设置 <span class="sub">OpenAI 兼容接口</span></h3>
+        <div class="form-grid">
+          <div class="field full">
+            <label>Base URL</label>
+            <input id="aiBaseUrl" placeholder="https://api.deepseek.com">
+            <div class="desc">填到域名或 /v1 均可，系统会自动补 /chat/completions。</div>
+          </div>
+          <div class="field">
+            <label>API Key <span class="tag">密钥</span></label>
+            <input id="aiApiKey" type="password" placeholder="sk-..." autocomplete="new-password">
+            <div class="secret-hint" id="aiKeyHint">未配置</div>
+          </div>
+          <div class="field">
+            <label>模型</label>
+            <input id="aiModel" placeholder="deepseek-chat">
+          </div>
+          <div class="field">
+            <label>Temperature</label>
+            <input id="aiTemperature" type="number" min="0" max="2" step="0.05" placeholder="1.15">
+          </div>
+          <div class="field">
+            <label>Max Tokens</label>
+            <input id="aiMaxTokens" type="number" min="1" max="32768" step="1" placeholder="300">
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnAiSave">保存 AI 设置</button>
+          <button class="btn" id="btnAiTest">测试连接</button>
+        </div>
+        <div class="result" id="aiTestResult">点击「测试连接」会发送一条 ping 请求。</div>
+      </div>
+    </section>
+
+    <!-- QQ -->
+    <section class="view" id="view-qq">
+      <div class="card">
+        <h3>QQ 设置 <span class="sub">NapCat / OneBot v11</span></h3>
+        <div class="form-grid">
+          <div class="field full">
+            <label>NapCat WS 地址</label>
+            <input id="qqWsUrl" placeholder="ws://napcat:3001">
+          </div>
+          <div class="field">
+            <label>Access Token <span class="tag">密钥</span></label>
+            <input id="qqToken" type="password" placeholder="OneBot access token" autocomplete="new-password">
+            <div class="secret-hint" id="qqTokenHint">未配置</div>
+          </div>
+          <div class="field">
+            <label>机器人自身 QQ</label>
+            <input id="qqSelfId" type="number" min="0" step="1" placeholder="登录后由 NapCat 自动回填">
+          </div>
+          <div class="field full">
+            <label>允许的 UIN 白名单 <span class="tag">一行一个</span></label>
+            <textarea id="qqAllowUins" placeholder="123456789&#10;987654321"></textarea>
+            <div class="desc">留空表示不限制。白名单内的 QQ 才能触发回复，强烈建议填写。</div>
+          </div>
+          <div class="field">
+            <label>允许群聊</label>
+            <label class="switch"><input id="qqAllowGroup" type="checkbox"><i></i><span>开启后处理群消息</span></label>
+          </div>
+          <div class="field">
+            <label>允许的群号 <span class="tag">一行一个，留空=全部</span></label>
+            <textarea id="qqAllowGroups" style="min-height:84px" placeholder="群号…"></textarea>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnQqSave">保存 QQ 设置</button>
+          <button class="btn" id="btnQqTest">测试连接</button>
+        </div>
+        <div class="result" id="qqTestResult">测试会通过 WS 调用 get_login_info。修改连接参数后请先保存。</div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h3>主动消息 <span class="sub">默认关闭</span></h3>
+        <div class="form-grid">
+          <div class="field">
+            <label>启用主动消息</label>
+            <label class="switch"><input id="pqEnabled" type="checkbox"><i></i><span>定时主动找主人聊天</span></label>
+          </div>
+          <div class="field">
+            <label>每日上限</label>
+            <input id="pqMax" type="number" min="0" max="100" step="1">
+          </div>
+          <div class="field">
+            <label>开始小时</label>
+            <input id="pqStart" type="number" min="0" max="23" step="1">
+          </div>
+          <div class="field">
+            <label>结束小时</label>
+            <input id="pqEnd" type="number" min="0" max="24" step="1">
+          </div>
+        </div>
+        <div class="actions"><button class="btn primary" id="btnProactiveSave">保存主动消息设置</button></div>
+      </div>
+    </section>
+
+    <!-- TTS -->
+    <section class="view" id="view-tts">
+      <div class="card">
+        <h3>TTS 设置 <span class="sub">豆包 → edge-tts 降级链</span></h3>
+        <div class="form-grid">
+          <div class="field">
+            <label>豆包 API Key <span class="tag">密钥</span></label>
+            <input id="ttsKey" type="password" placeholder="火山引擎语音 Key" autocomplete="new-password">
+            <div class="secret-hint" id="ttsKeyHint">未配置</div>
+          </div>
+          <div class="field">
+            <label>Voice ID</label>
+            <input id="ttsVoiceId" placeholder="复刻音色 ID">
+          </div>
+          <div class="field">
+            <label>Resource ID</label>
+            <input id="ttsResource" placeholder="seed-icl-2.0">
+          </div>
+          <div class="field">
+            <label>备用 edge-tts</label>
+            <label class="switch"><input id="ttsEdgeEnabled" type="checkbox"><i></i><span>豆包失败时自动降级</span></label>
+          </div>
+          <div class="field">
+            <label>edge-tts 音色</label>
+            <input id="ttsEdgeVoice" placeholder="zh-CN-XiaoyiNeural">
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnTtsSave">保存 TTS 设置</button>
+          <button class="btn" id="btnTtsTest">试听</button>
+        </div>
+        <div class="result" id="ttsTestResult">试听会合成一句固定文本；修改配置后建议先保存。</div>
+        <audio id="ttsAudio" controls hidden style="margin-top:14px;width:100%;max-width:420px"></audio>
+      </div>
+    </section>
+
+    <!-- 人格与记忆 -->
+    <section class="view" id="view-memory">
+      <div class="memo-grid">
+        <div class="card">
+          <h3>人格 role-card.md <span class="sub" id="roleCount">0 字</span></h3>
+          <textarea id="roleText" class="mono" placeholder="在这里写她的人格设定…"></textarea>
+          <div class="actions"><button class="btn primary" id="btnRoleSave">保存人格</button></div>
+          <div class="hint" style="margin-top:10px">保存前会自动备份到 /data/backup/时间戳_role-card.md。</div>
+        </div>
+        <div class="card">
+          <h3>共同记忆 shared-memory.md <span class="sub" id="sharedCount">0 字</span></h3>
+          <textarea id="sharedText" class="mono" placeholder="她记住的事情…"></textarea>
+          <div class="actions"><button class="btn primary" id="btnSharedSave">保存记忆</button></div>
+          <div class="hint" style="margin-top:10px">保存前会自动备份到 /data/backup/时间戳_shared-memory.md。</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>对话历史</h3>
+        <div class="hint">清空会同时清空 QQ 历史（history.json）与网页历史（web-history.json），并先备份到 /data/backup。</div>
+        <div class="actions"><button class="btn danger" id="btnClearHistory">清空对话历史</button></div>
+      </div>
+    </section>
+
+    <!-- 表情库 -->
+    <section class="view" id="view-stickers">
+      <div class="card">
+        <h3>上传表情 <span class="sub">png/jpg/webp，≤2MB，自动压缩 512×512</span></h3>
+        <div class="form-grid">
+          <div class="field">
+            <label>图片文件</label>
+            <input id="stickerFile" type="file" accept="image/png,image/jpeg,image/webp">
+          </div>
+          <div class="field">
+            <label>表情名称 <span class="tag">留空用文件名</span></label>
+            <input id="stickerName" placeholder="例如：好耶">
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnStickerUpload">上传</button>
+          <button class="btn" id="btnStickerRefresh">刷新列表</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>表情列表 <span class="sub" id="stickerCount">0 张</span></h3>
+        <div class="sticker-grid" id="stickerGrid"></div>
+        <div class="empty" id="stickerEmpty" hidden>还没有表情，上传一张吧。</div>
+      </div>
+    </section>
+
+    <!-- 抖音自动化 -->
+    <section class="view" id="view-automation">
+      <div class="card">
+        <h3>抖音自动化 <span class="sub">默认全部关闭</span></h3>
+        <div class="auto-row">
+          <div>
+            <label class="switch"><input id="autoEnabled" type="checkbox"><i></i><span><b>总开关</b></span></label>
+            <div class="risk">自动化操作可能导致账号封禁，风险自负</div>
+          </div>
+        </div>
+        <div class="auto-row">
+          <div>
+            <label class="switch"><input id="autoWatch" type="checkbox"><i></i><span>watch · 刷视频</span></label>
+            <div class="risk">自动化操作可能导致账号封禁，风险自负</div>
+          </div>
+        </div>
+        <div class="auto-row">
+          <div>
+            <label class="switch"><input id="autoReplyComments" type="checkbox"><i></i><span>reply-comments · 回复评论</span></label>
+            <div class="risk">自动化操作可能导致账号封禁，风险自负</div>
+          </div>
+        </div>
+        <div class="auto-row">
+          <div>
+            <label class="switch"><input id="autoDynamic" type="checkbox"><i></i><span>dynamic · 发布图文动态</span></label>
+            <div class="risk">自动化操作可能导致账号封禁，风险自负</div>
+          </div>
+        </div>
+        <div class="auto-row">
+          <div>
+            <label class="switch"><input id="autoMention" type="checkbox"><i></i><span>mention · 评论 @</span></label>
+            <div class="risk">自动化操作可能导致账号封禁，风险自负</div>
+          </div>
+        </div>
+        <div class="form-grid" style="margin-top:16px">
+          <div class="field full">
+            <label>CDP 浏览器地址 <span class="tag">可选</span></label>
+            <input id="autoCdpUrl" placeholder="http://host.docker.internal:9227">
+            <div class="desc">容器内没有浏览器；需在宿主机启动已登录抖音的 Chrome（--remote-debugging-port=9227），并填写容器可访问的地址。</div>
+          </div>
+        </div>
+        <div class="actions"><button class="btn primary" id="btnAutomationSave">保存自动化设置</button></div>
+        <div class="hint" style="margin-top:12px">只有总开关与子开关同时开启时模块才会执行；否则脚本日志为 <span class="mono">douyin automation disabled by design</span>。</div>
+      </div>
+    </section>
+
+    <!-- 日志 -->
+    <section class="view" id="view-logs">
+      <div class="card">
+        <div class="log-toolbar">
+          <div class="field">
+            <label>服务</label>
+            <select id="logSvc">
+              <option value="bridge">bridge</option>
+              <option value="webchat">webchat</option>
+              <option value="admin">admin</option>
+              <option value="notify">notify</option>
+              <option value="watch">watch</option>
+              <option value="dynamic">dynamic</option>
+              <option value="mention">mention</option>
+              <option value="reply-comments">reply-comments</option>
+              <option value="learn">learn</option>
+              <option value="research">research</option>
+              <option value="diary">diary</option>
+              <option value="share">share</option>
+              <option value="signature">signature</option>
+              <option value="balance">balance</option>
+              <option value="proactive-slot">proactive-slot</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>行数</label>
+            <input id="logLines" type="number" min="10" max="2000" step="10" value="500">
+          </div>
+          <div class="field grow">
+            <label>关键词过滤</label>
+            <input id="logFilter" placeholder="例如 config reloaded">
+          </div>
+          <div class="field" style="flex-direction:row;align-items:center;height:42px">
+            <label class="switch" style="margin-top:6px"><input id="logAuto" type="checkbox"><i></i><span>自动刷新</span></label>
+          </div>
+          <button class="btn" id="btnLogRefresh">刷新</button>
+        </div>
+        <div class="logbox" id="logBox">点击刷新加载日志…</div>
+        <div class="hint" id="logMeta" style="margin-top:10px"></div>
+      </div>
+    </section>
+
+    <!-- 运维 -->
+    <section class="view" id="view-ops">
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>服务重启</h3>
+          <div class="ops-list">
+            <div class="ops-item">
+              <div><b>重启 Bridge</b><p>写入重启标志，容器由 compose restart 拉起。</p></div>
+              <button class="btn" id="btnRestartBridge">重启</button>
+            </div>
+            <div class="ops-item">
+              <div><b>重启 Webchat</b><p>网页聊天服务，重启会短暂断开 WS。</p></div>
+              <button class="btn" id="btnRestartWebchat">重启</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>配置导入 / 导出</h3>
+          <div class="ops-list">
+            <div class="ops-item">
+              <div><b>导出配置</b><p>默认对密钥打码；完整导出请妥善保管。</p></div>
+              <div style="display:flex;gap:8px"><button class="btn" id="btnExportMasked">打码导出</button><button class="btn danger" id="btnExportFull">完整导出</button></div>
+            </div>
+            <div class="ops-item">
+              <div><b>导入配置</b><p>上传 config.json，会覆盖现有业务配置并热加载。</p></div>
+              <input id="importFile" type="file" accept="application/json,.json" style="max-width:220px">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid cols-2" style="margin-top:16px">
+        <div class="card">
+          <h3>修改密码</h3>
+          <div class="form-grid" style="grid-template-columns:1fr">
+            <div class="field"><label>原密码</label><input id="pwdOld" type="password" autocomplete="current-password"></div>
+            <div class="field"><label>新密码 <span class="tag">至少 8 位</span></label><input id="pwdNew" type="password" autocomplete="new-password"></div>
+            <div class="field"><label>再次输入新密码</label><input id="pwdNew2" type="password" autocomplete="new-password"></div>
+          </div>
+          <div class="actions"><button class="btn primary" id="btnPassword">修改密码</button></div>
+        </div>
+        <div class="card">
+          <h3>运行信息</h3>
+          <div class="hint">版本：<span id="opsVersion">v1.0.0</span></div>
+          <div class="hint" style="margin-top:8px">数据目录：<span class="mono" id="opsDataDir">/data</span></div>
+          <div class="hint" style="margin-top:8px">日志目录：<span class="mono">/data/logs</span>（按天切分，保留 7 天，单文件 5MB）</div>
+          <div class="hint" style="margin-top:8px">备份目录：<span class="mono">/data/backup</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const state = { config: null, status: null, view: 'overview', logTimer: null, statusTimer: null };
+
+const $ = id => document.getElementById(id);
+const VIEW_META = {
+  overview: ['总览', '服务状态、QQ 登录与资源占用'],
+  ai: ['AI 设置', 'DeepSeek / OpenAI 兼容接口'],
+  qq: ['QQ 设置', 'NapCat WS、白名单与群聊'],
+  tts: ['TTS 设置', '豆包语音与 edge-tts 备用'],
+  memory: ['人格与记忆', '在线编辑 role-card.md 与 shared-memory.md'],
+  stickers: ['表情库', '上传、压缩与删除表情'],
+  automation: ['抖音自动化', '默认关闭，开启风险自负'],
+  logs: ['日志', '按服务查看最近日志'],
+  ops: ['运维', '重启、导入导出与修改密码'],
+};
+
+function toast(message, isError = false) {
+  const node = $('toast');
+  node.textContent = message;
+  node.className = 'toast show' + (isError ? ' err' : '');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { node.className = 'toast'; }, 3200);
+}
+
+async function api(path, options = {}) {
+  const response = await fetch(path, { credentials: 'same-origin', ...options });
+  if (response.status === 401) {
+    showLogin();
+    throw new Error('未登录或会话已过期');
+  }
+  const type = response.headers.get('content-type') || '';
+  if (type.includes('application/json')) {
+    const body = await response.json();
+    if (!body.ok) {
+      const error = new Error(body.error || `请求失败（HTTP ${response.status}）`);
+      error.data = body.data;
+      error.status = response.status;
+      throw error;
+    }
+    return body.data;
+  }
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response;
+}
+
+function jsonRequest(path, method, payload) {
+  return api(path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+}
+
+function setVal(id, value) { const node = $(id); if (node) node.value = value ?? ''; }
+function setCheck(id, value) { const node = $(id); if (node) node.checked = Boolean(value); }
+function setText(id, value) { const node = $(id); if (node) node.textContent = value ?? ''; }
+
+function setSecret(id, hintId, value) {
+  setVal(id, value || '');
+  setText(hintId, value ? `当前：${value}` : '未配置');
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes) || 0;
+  if (value < 1024) return `${value} B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let size = value / 1024;
+  let index = 0;
+  while (size >= 1024 && index < units.length - 1) { size /= 1024; index += 1; }
+  return `${size.toFixed(size >= 10 ? 0 : 1)} ${units[index]}`;
+}
+
+function formatUptime(seconds) {
+  const total = Number(seconds) || 0;
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  return days ? `${days} 天 ${hours} 小时` : hours ? `${hours} 小时 ${minutes} 分` : `${minutes} 分`;
+}
+
+function showLogin() {
+  $('app').hidden = true;
+  $('loginScreen').hidden = false;
+  $('loginPassword').focus();
+}
+
+function showApp() {
+  $('loginScreen').hidden = true;
+  $('app').hidden = false;
+}
+
+function fillConfig(config) {
+  state.config = config;
+  const ai = config.ai || {};
+  setVal('aiBaseUrl', ai.baseUrl);
+  setSecret('aiApiKey', 'aiKeyHint', ai.apiKey);
+  setVal('aiModel', ai.model);
+  setVal('aiTemperature', ai.temperature);
+  setVal('aiMaxTokens', ai.maxTokens);
+
+  const qq = config.qq || {};
+  setVal('qqWsUrl', qq.wsUrl);
+  setSecret('qqToken', 'qqTokenHint', qq.accessToken);
+  setVal('qqSelfId', qq.selfId || '');
+  setVal('qqAllowUins', (qq.allowUins || []).join('\n'));
+  setCheck('qqAllowGroup', qq.allowGroup);
+  setVal('qqAllowGroups', (qq.allowGroups || []).join('\n'));
+  const proactive = qq.proactive || {};
+  setCheck('pqEnabled', proactive.enabled);
+  setVal('pqMax', proactive.maxPerDay);
+  setVal('pqStart', proactive.startHour);
+  setVal('pqEnd', proactive.endHour);
+
+  const tts = config.tts || {};
+  setSecret('ttsKey', 'ttsKeyHint', tts.doubao ? tts.doubao.apiKey : '');
+  setVal('ttsVoiceId', tts.doubao ? tts.doubao.voiceId : '');
+  setVal('ttsResource', tts.doubao ? tts.doubao.resource : '');
+  setCheck('ttsEdgeEnabled', tts.edge ? tts.edge.enabled : true);
+  setVal('ttsEdgeVoice', tts.edge ? tts.edge.voice : '');
+
+  const automation = config.automation || {};
+  setCheck('autoEnabled', automation.enabled);
+  setCheck('autoWatch', automation.watch);
+  setCheck('autoReplyComments', automation.replyComments);
+  setCheck('autoDynamic', automation.dynamic);
+  setCheck('autoMention', automation.mention);
+  setVal('autoCdpUrl', automation.cdpUrl);
+
+  if (config.auth && config.auth.mustChange) $('passwordBanner').hidden = false;
+}
+
+async function saveSection(patch, button) {
+  if (button) button.disabled = true;
+  try {
+    const saved = await jsonRequest('/api/config', 'PUT', patch);
+    fillConfig(saved);
+    toast('已保存，bridge / webchat 已通知热加载');
+    await refreshStatus();
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function splitLines(value) {
+  return String(value || '').split(/[\s,，;；]+/).map(item => item.trim()).filter(Boolean);
+}
+
+async function refreshStatus() {
+  try {
+    const data = await api('/api/status');
+    state.status = data;
+    renderStatus(data);
+  } catch (error) {
+    if (!String(error.message).includes('未登录')) toast(`状态获取失败：${error.message}`, true);
+  }
+}
+
+function setService(id, online, meta) {
+  const node = $(id);
+  node.classList.toggle('online', Boolean(online));
+  node.classList.toggle('warn', !online);
+  const metaNode = node.querySelector('.meta');
+  if (metaNode && meta !== undefined) metaNode.textContent = meta;
+}
+
+function renderStatus(data) {
+  const services = data.services || {};
+  const napcat = services.napcat || {};
+  const bridge = services.bridge || {};
+  const webchat = services.webchat || {};
+  setService('svcNapcat', napcat.online, napcat.online ? `${napcat.host || ''}:${napcat.port || ''} 可连接` : `离线 · ${napcat.error || '无法连接'}`);
+  setService('svcBridge', bridge.online, bridge.online ? '在线 · /healthz OK' : `离线 · ${bridge.error || ''}`);
+  setService('svcWebchat', webchat.online, webchat.online ? '在线 · /healthz OK' : `离线 · ${webchat.error || ''}`);
+
+  const qq = data.qq || {};
+  setText('ovQqNumber', qq.selfId || '未登录');
+  setText('ovQqName', qq.nickname ? `昵称：${qq.nickname}` : '未获取登录信息');
+  setText('ovQqState', qq.online ? '在线' : '离线');
+  $('svcQq').classList.toggle('online', Boolean(qq.online));
+  $('svcQq').classList.toggle('warn', !qq.online);
+  setText('ovWs', qq.wsUrl || '—');
+
+  const deepseek = data.deepseek || {};
+  setText('ovCalls', String(deepseek.calls || 0));
+  $('ovCalls').innerHTML = `${deepseek.calls || 0} <small>次调用</small>`;
+  setText('ovErrors', `${deepseek.errors || 0} 次`);
+  setText('ovLastError', deepseek.lastError ? deepseek.lastError : '暂无错误');
+  const dsDot = $('dsDot');
+  dsDot.className = 'dot';
+  dsDot.style.background = deepseek.lastError ? 'var(--danger)' : 'var(--ok)';
+  dsDot.style.boxShadow = 'none';
+
+  const disk = data.disk || {};
+  setText('ovDisk', `${formatBytes(disk.used || 0)} / ${formatBytes(disk.total || 0)}`);
+  setText('ovDiskFree', `剩余 ${formatBytes(disk.free || 0)}`);
+  const percent = disk.total ? Math.min(100, Math.round((disk.used / disk.total) * 100)) : 0;
+  $('ovDiskBar').style.width = `${percent}%`;
+  setText('ovDataDir', data.dataDir || '/data');
+  setText('ovVersion', `v${data.version || '1.0.0'}`);
+  setText('footVersion', `v${data.version || '1.0.0'}`);
+  setText('opsVersion', `v${data.version || '1.0.0'}`);
+  setText('opsDataDir', data.dataDir || '/data');
+  setText('ovUptime', `已运行 ${formatUptime(data.uptime)}`);
+  const auto = data.automation || {};
+  setText('ovAutomation', `抖音自动化：${auto.enabled ? '开启' : '关闭'}（watch ${auto.watch ? '开' : '关'} / 评论 ${auto.replyComments ? '开' : '关'} / 动态 ${auto.dynamic ? '开' : '关'} / @ ${auto.mention ? '开' : '关'}）`);
+  $('passwordBanner').hidden = !data.mustChangePassword;
+}
+
+function showView(name) {
+  state.view = name;
+  document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.view === name));
+  document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === `view-${name}`));
+  const meta = VIEW_META[name] || ['', ''];
+  $('viewTitle').textContent = meta[0];
+  $('viewSub').textContent = meta[1];
+  if (name === 'logs') refreshLogs();
+  if (name === 'memory') loadMemory();
+  if (name === 'stickers') loadStickers();
+  if (name === 'overview') refreshStatus();
+  if (window.innerWidth < 980) window.scrollTo({ top: 0 });
+}
+
+// ---------------------------------------------------------------------------
+// 登录
+// ---------------------------------------------------------------------------
+$('loginForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  $('loginError').textContent = '';
+  const password = $('loginPassword').value;
+  if (!password) return;
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const body = await response.json();
+    if (!body.ok) { $('loginError').textContent = body.error || '登录失败'; return; }
+    $('loginPassword').value = '';
+    showApp();
+    if (body.data && body.data.mustChangePassword) $('passwordBanner').hidden = false;
+    await bootData();
+  } catch (error) {
+    $('loginError').textContent = error.message;
+  }
+});
+
+$('btnLogout').addEventListener('click', async () => {
+  try { await api('/api/logout', { method: 'POST' }); } catch { }
+  showLogin();
+});
+
+$('bannerGoOps').addEventListener('click', () => showView('ops'));
+
+// ---------------------------------------------------------------------------
+// 导航
+// ---------------------------------------------------------------------------
+document.querySelectorAll('.nav-item').forEach(button => {
+  button.addEventListener('click', () => showView(button.dataset.view));
+});
+$('btnRefreshAll').addEventListener('click', async () => {
+  await refreshStatus();
+  toast('状态已刷新');
+});
+
+// ---------------------------------------------------------------------------
+// AI
+// ---------------------------------------------------------------------------
+$('btnAiSave').addEventListener('click', async event => {
+  const temperatureText = $('aiTemperature').value.trim();
+  const maxTokensText = $('aiMaxTokens').value.trim();
+  const patch = { ai: {
+    baseUrl: $('aiBaseUrl').value.trim(),
+    apiKey: $('aiApiKey').value.trim(),
+    model: $('aiModel').value.trim(),
+    temperature: temperatureText === '' ? 1.15 : Number(temperatureText),
+    maxTokens: maxTokensText === '' ? 300 : Number(maxTokensText),
+  } };
+  try { await saveSection(patch, event.currentTarget); } catch (error) { toast(error.message, true); }
+});
+
+$('btnAiTest').addEventListener('click', async event => {
+  const node = $('aiTestResult');
+  node.className = 'result';
+  node.textContent = '正在请求…';
+  event.currentTarget.disabled = true;
+  try {
+    const data = await jsonRequest('/api/test/ai', 'POST', {
+      baseUrl: $('aiBaseUrl').value.trim(),
+      apiKey: $('aiApiKey').value.trim(),
+      model: $('aiModel').value.trim(),
+      temperature: Number($('aiTemperature').value || 0),
+    });
+    node.className = 'result ok';
+    node.textContent = `HTTP ${data.status} · ${data.latencyMs}ms · ${data.model}\n返回：${data.reply || '（空）'}`;
+    toast('AI 连接成功');
+  } catch (error) {
+    node.className = 'result err';
+    const latency = error.data && error.data.latencyMs ? `${error.data.latencyMs}ms · ` : '';
+    node.textContent = `失败：${latency}${error.message}`;
+    toast(`AI 测试失败：${error.message}`, true);
+  } finally {
+    event.currentTarget.disabled = false;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// QQ
+// ---------------------------------------------------------------------------
+$('btnQqSave').addEventListener('click', async event => {
+  const patch = { qq: {
+    wsUrl: $('qqWsUrl').value.trim(),
+    accessToken: $('qqToken').value.trim(),
+    selfId: Number($('qqSelfId').value || 0),
+    allowUins: splitLines($('qqAllowUins').value),
+    allowGroup: $('qqAllowGroup').checked,
+    allowGroups: splitLines($('qqAllowGroups').value),
+  } };
+  try { await saveSection(patch, event.currentTarget); } catch (error) { toast(error.message, true); }
+});
+
+$('btnProactiveSave').addEventListener('click', async event => {
+  const numberOr = (id, fallback) => {
+    const text = $(id).value.trim();
+    return text === '' ? fallback : Number(text);
+  };
+  const patch = { qq: { proactive: {
+    enabled: $('pqEnabled').checked,
+    maxPerDay: numberOr('pqMax', 8),
+    startHour: numberOr('pqStart', 8),
+    endHour: numberOr('pqEnd', 23),
+  } } };
+  try { await saveSection(patch, event.currentTarget); } catch (error) { toast(error.message, true); }
+});
+
+$('btnQqTest').addEventListener('click', async event => {
+  const node = $('qqTestResult');
+  node.className = 'result';
+  node.textContent = '正在连接 NapCat…';
+  event.currentTarget.disabled = true;
+  try {
+    const data = await jsonRequest('/api/test/qq', 'POST', {});
+    if (data.online) {
+      node.className = 'result ok';
+      node.textContent = `在线 · ${data.latencyMs}ms · QQ ${data.selfId}${data.nickname ? `（${data.nickname}）` : ''}`;
+      toast('NapCat 连接成功');
+    } else {
+      node.className = 'result err';
+      node.textContent = `离线：${data.error || '未知错误'}（${data.latencyMs}ms）`;
+      toast('NapCat 连接失败', true);
+    }
+  } catch (error) {
+    node.className = 'result err';
+    node.textContent = `失败：${error.message}`;
+  } finally {
+    event.currentTarget.disabled = false;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// TTS
+// ---------------------------------------------------------------------------
+$('btnTtsSave').addEventListener('click', async event => {
+  const patch = { tts: {
+    doubao: {
+      apiKey: $('ttsKey').value.trim(),
+      voiceId: $('ttsVoiceId').value.trim(),
+      resource: $('ttsResource').value.trim(),
+    },
+    edge: {
+      enabled: $('ttsEdgeEnabled').checked,
+      voice: $('ttsEdgeVoice').value.trim(),
+    },
+  } };
+  try { await saveSection(patch, event.currentTarget); } catch (error) { toast(error.message, true); }
+});
+
+$('btnTtsTest').addEventListener('click', async event => {
+  const node = $('ttsTestResult');
+  const audio = $('ttsAudio');
+  node.className = 'result';
+  node.textContent = '正在合成…（豆包失败会自动尝试 edge-tts）';
+  audio.hidden = true;
+  event.currentTarget.disabled = true;
+  try {
+    const response = await fetch('/api/test/tts', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tts: {
+        doubao: {
+          apiKey: $('ttsKey').value.trim(),
+          voiceId: $('ttsVoiceId').value.trim(),
+          resource: $('ttsResource').value.trim(),
+        },
+        edge: {
+          enabled: $('ttsEdgeEnabled').checked,
+          voice: $('ttsEdgeVoice').value.trim(),
+        },
+      } }),
+    });
+    if (!response.ok) {
+      let message = `HTTP ${response.status}`;
+      try { const body = await response.json(); message = body.error || message; } catch { }
+      throw new Error(message);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    audio.src = url;
+    audio.hidden = false;
+    audio.play().catch(() => { });
+    node.className = 'result ok';
+    node.textContent = `合成成功 · ${(blob.size / 1024).toFixed(1)} KB`;
+    toast('试听音频已生成');
+  } catch (error) {
+    node.className = 'result err';
+    node.textContent = `失败：${error.message}`;
+    toast(`TTS 测试失败：${error.message}`, true);
+  } finally {
+    event.currentTarget.disabled = false;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 人格与记忆
+// ---------------------------------------------------------------------------
+async function loadMemory() {
+  try {
+    const [role, shared] = await Promise.all([
+      api('/api/memory/role'),
+      api('/api/memory/shared'),
+    ]);
+    $('roleText').value = role.content || '';
+    $('sharedText').value = shared.content || '';
+    updateCounts();
+  } catch (error) { toast(`读取人格失败：${error.message}`, true); }
+}
+
+function updateCounts() {
+  setText('roleCount', `${$('roleText').value.length} 字`);
+  setText('sharedCount', `${$('sharedText').value.length} 字`);
+}
+$('roleText').addEventListener('input', updateCounts);
+$('sharedText').addEventListener('input', updateCounts);
+
+$('btnRoleSave').addEventListener('click', async event => {
+  event.currentTarget.disabled = true;
+  try {
+    await jsonRequest('/api/memory/role', 'PUT', { content: $('roleText').value });
+    toast('人格已保存（已自动备份）');
+    await refreshStatus();
+  } catch (error) { toast(error.message, true); }
+  finally { event.currentTarget.disabled = false; }
+});
+
+$('btnSharedSave').addEventListener('click', async event => {
+  event.currentTarget.disabled = true;
+  try {
+    await jsonRequest('/api/memory/shared', 'PUT', { content: $('sharedText').value });
+    toast('记忆已保存（已自动备份）');
+  } catch (error) { toast(error.message, true); }
+  finally { event.currentTarget.disabled = false; }
+});
+
+$('btnClearHistory').addEventListener('click', async event => {
+  if (!confirm('确认清空全部对话历史？此操作会先自动备份。')) return;
+  if (!confirm('再次确认：清空后聊天记忆将从头开始，确定继续？')) return;
+  event.currentTarget.disabled = true;
+  try {
+    await api('/api/history/clear', { method: 'POST' });
+    toast('对话历史已清空');
+  } catch (error) { toast(error.message, true); }
+  finally { event.currentTarget.disabled = false; }
+});
+
+// ---------------------------------------------------------------------------
+// 表情库
+// ---------------------------------------------------------------------------
+async function loadStickers() {
+  try {
+    const data = await api('/api/stickers');
+    renderStickers(data.stickers || []);
+  } catch (error) { toast(`读取表情失败：${error.message}`, true); }
+}
+
+function renderStickers(stickers) {
+  const grid = $('stickerGrid');
+  grid.textContent = '';
+  $('stickerCount').textContent = `${stickers.length} 张`;
+  $('stickerEmpty').hidden = stickers.length > 0;
+  for (const sticker of stickers) {
+    const card = document.createElement('div');
+    card.className = 'sticker';
+    const image = document.createElement('img');
+    image.src = sticker.url;
+    image.alt = sticker.name;
+    image.loading = 'lazy';
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = sticker.name;
+    name.title = sticker.name;
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = `${sticker.bucket === 'mine' ? '收藏 · ' : ''}${formatBytes(sticker.size)}`;
+    const remove = document.createElement('button');
+    remove.className = 'btn danger';
+    remove.textContent = '删除';
+    remove.addEventListener('click', async () => {
+      if (!confirm(`删除表情「${sticker.name}」？`)) return;
+      try {
+        await api(`/api/stickers/${encodeURIComponent(sticker.name)}`, { method: 'DELETE' });
+        toast('已删除');
+        await loadStickers();
+      } catch (error) { toast(error.message, true); }
+    });
+    card.append(image, name, meta, remove);
+    grid.appendChild(card);
+  }
+}
+
+$('btnStickerRefresh').addEventListener('click', loadStickers);
+
+$('btnStickerUpload').addEventListener('click', async event => {
+  const file = $('stickerFile').files[0];
+  if (!file) return toast('请选择图片文件', true);
+  if (file.size > 2 * 1024 * 1024) return toast('图片不能超过 2MB', true);
+  event.currentTarget.disabled = true;
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('name', $('stickerName').value.trim() || file.name.replace(/\.[^.]+$/, ''));
+    await api('/api/stickers', { method: 'POST', body: form });
+    toast('表情已上传并压缩到 512×512');
+    $('stickerFile').value = '';
+    $('stickerName').value = '';
+    await loadStickers();
+  } catch (error) { toast(error.message, true); }
+  finally { event.currentTarget.disabled = false; }
+});
+
+// ---------------------------------------------------------------------------
+// 自动化
+// ---------------------------------------------------------------------------
+$('btnAutomationSave').addEventListener('click', async event => {
+  const patch = { automation: {
+    enabled: $('autoEnabled').checked,
+    watch: $('autoWatch').checked,
+    replyComments: $('autoReplyComments').checked,
+    dynamic: $('autoDynamic').checked,
+    mention: $('autoMention').checked,
+    cdpUrl: $('autoCdpUrl').value.trim(),
+  } };
+  try { await saveSection(patch, event.currentTarget); } catch (error) { toast(error.message, true); }
+});
+
+// ---------------------------------------------------------------------------
+// 日志
+// ---------------------------------------------------------------------------
+async function refreshLogs(auto = false) {
+  const svc = $('logSvc').value;
+  const lines = Number($('logLines').value || 500);
+  const keyword = $('logFilter').value.trim();
+  try {
+    const data = await api(`/api/logs?svc=${encodeURIComponent(svc)}&lines=${encodeURIComponent(lines)}&q=${encodeURIComponent(keyword)}`);
+    const box = $('logBox');
+    box.textContent = '';
+    if (!data.lines.length) {
+      box.textContent = '（没有匹配的日志）';
+    } else {
+      for (const line of data.lines) {
+        const span = document.createElement('div');
+        span.textContent = line;
+        if (line.includes('[ERROR]')) span.className = 'err';
+        else if (line.includes('[WARN]')) span.className = 'warn';
+        box.appendChild(span);
+      }
+      box.scrollTop = box.scrollHeight;
+    }
+    $('logMeta').textContent = `${svc} · ${data.lines.length} 行 · 文件：${(data.files || []).join(', ') || '无'}`;
+    if (!auto) toast('日志已刷新');
+  } catch (error) {
+    if (!auto) toast(`日志读取失败：${error.message}`, true);
+  }
+}
+
+$('btnLogRefresh').addEventListener('click', () => refreshLogs());
+$('logSvc').addEventListener('change', () => refreshLogs());
+$('logLines').addEventListener('change', () => refreshLogs());
+$('logFilter').addEventListener('keydown', event => { if (event.key === 'Enter') refreshLogs(); });
+
+// ---------------------------------------------------------------------------
+// 运维
+// ---------------------------------------------------------------------------
+$('btnRestartBridge').addEventListener('click', async event => {
+  if (!confirm('确认重启 bridge？容器会被 compose 自动拉起。')) return;
+  event.currentTarget.disabled = true;
+  try {
+    await api('/api/restart?svc=bridge', { method: 'POST' });
+    toast('已写入 bridge 重启标志');
+  } catch (error) { toast(error.message, true); }
+  finally { setTimeout(() => { event.currentTarget.disabled = false; }, 1200); }
+});
+
+$('btnRestartWebchat').addEventListener('click', async event => {
+  if (!confirm('确认重启 webchat？网页聊天会短暂断开。')) return;
+  event.currentTarget.disabled = true;
+  try {
+    await api('/api/restart?svc=webchat', { method: 'POST' });
+    toast('已写入 webchat 重启标志');
+  } catch (error) { toast(error.message, true); }
+  finally { setTimeout(() => { event.currentTarget.disabled = false; }, 1200); }
+});
+
+$('btnExportMasked').addEventListener('click', () => {
+  window.location.href = '/api/export?secrets=masked';
+  toast('已开始导出（密钥打码）');
+});
+
+$('btnExportFull').addEventListener('click', () => {
+  if (!confirm('完整配置包含明文密钥，确认下载？')) return;
+  window.location.href = '/api/export?secrets=full';
+});
+
+$('importFile').addEventListener('change', async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    JSON.parse(text);
+    if (!confirm('导入会覆盖当前业务配置，确认继续？')) { event.target.value = ''; return; }
+    const response = await fetch('/api/import', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' },
+      body: text,
+    });
+    const body = await response.json();
+    if (!body.ok) throw new Error(body.error || '导入失败');
+    fillConfig(body.data);
+    toast('配置已导入并热加载');
+    await refreshStatus();
+  } catch (error) {
+    toast(`导入失败：${error.message}`, true);
+  } finally {
+    event.target.value = '';
+  }
+});
+
+$('btnPassword').addEventListener('click', async event => {
+  const oldPassword = $('pwdOld').value;
+  const newPassword = $('pwdNew').value;
+  const confirmPassword = $('pwdNew2').value;
+  if (!oldPassword || !newPassword) return toast('请填写原密码与新密码', true);
+  if (newPassword.length < 8) return toast('新密码至少 8 位', true);
+  if (newPassword !== confirmPassword) return toast('两次输入的新密码不一致', true);
+  event.currentTarget.disabled = true;
+  try {
+    await jsonRequest('/api/password', 'POST', { oldPassword, newPassword });
+    $('pwdOld').value = '';
+    $('pwdNew').value = '';
+    $('pwdNew2').value = '';
+    $('passwordBanner').hidden = true;
+    toast('密码已修改');
+  } catch (error) { toast(error.message, true); }
+  finally { event.currentTarget.disabled = false; }
+});
+
+// ---------------------------------------------------------------------------
+// 启动
+// ---------------------------------------------------------------------------
+async function bootData() {
+  try {
+    const [config] = await Promise.all([
+      api('/api/config'),
+      refreshStatus(),
+      loadMemory(),
+      loadStickers(),
+    ]);
+    fillConfig(config);
+    showApp();
+  } catch (error) {
+    if (!String(error.message).includes('未登录')) toast(`初始化失败：${error.message}`, true);
+  }
+}
+
+async function boot() {
+  try {
+    const config = await api('/api/config');
+    fillConfig(config);
+    showApp();
+    await Promise.all([refreshStatus(), loadMemory(), loadStickers()]);
+  } catch (error) {
+    showLogin();
+  }
+}
+
+state.statusTimer = setInterval(() => {
+  if (!$('app').hidden && (state.view === 'overview' || state.view === 'ops')) refreshStatus();
+}, 30000);
+
+state.logTimer = setInterval(() => {
+  if (!$('app').hidden && state.view === 'logs' && $('logAuto').checked && !document.hidden) refreshLogs(true);
+}, 5000);
+
+$('logSvc').value = 'bridge';
+boot();
+</script>
+</body>
+</html>
